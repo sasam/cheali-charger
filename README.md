@@ -4,6 +4,20 @@ FOR TESTING.
 Plus Features
 -------------
 
++ On-the-fly adjustable current (except NiMH and NiCD)
++ adjustable voltage (before process)
++ On-the-fly adjustable capacity limit (limits screen)
++ batteries can be charged from 0 voltage
++ long press Stop key for stop - prevents accidental stop with loosing data.
+
+
+Now it is possible to change main parameters while charging discharging and cycling.
+New voltage/current will be actual till the battery type change. It does not stores to EEPROM.
+New capacity limit will be used only once. Capacity limit reaching is no longer acts like an error - so it can be used for skip first discharge in cycling mode
+
+
+Icluded Features (from Jozsef Nagy)
+-----------------------------------
  - Simple Estimated Time for Accomplishment (TESTING)
  - Powerscren (Watt and Watthour)
  - cycle discharge/wait/charge program for Nixx and Lixx etc.
