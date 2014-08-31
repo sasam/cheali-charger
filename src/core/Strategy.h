@@ -23,6 +23,7 @@
 
 
 namespace Strategy {
+    extern uint8_t OnTheFly_;   //ign
     enum statusType {ERROR, COMPLETE, RUNNING };
     struct VTable {
         void (*powerOn)();

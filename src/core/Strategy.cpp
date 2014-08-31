@@ -22,10 +22,16 @@
 #include "memory.h"
 #include "Monitor.h"
 #include "PolarityCheck.h"
-#include "AnalogInputs.h"    
+#include "AnalogInputs.h"
+
+
+#include "ProgramData.h" 	 //ign
+#include "TheveninChargeStrategy.h"		//ign
+#include "TheveninDischargeStrategy.h"		//ign
+
 
 namespace Strategy {
-
+  uint8_t OnTheFly_;
     const VTable * strategy_;
 
 
@@ -37,7 +43,8 @@ namespace Strategy {
 #endif
         Buzzer::soundProgramComplete();
         waitButtonPressed();
-        Buzzer::soundOff(); 
+        Buzzer::soundOff();
+		hardware::setBatteryOutput(true);  //ign
     }
 
     void chargingMonitorError() {
@@ -50,6 +57,7 @@ namespace Strategy {
 
     void strategyPowerOn() {
         void (*powerOn)() = pgm::read(&strategy_->powerOn);
+		OnTheFly_ = 0;
         powerOn();
     }
     void strategyPowerOff() {
@@ -97,29 +105,84 @@ namespace Strategy {
             if(!PolarityCheck::runReversedPolarityInfo()) {
                 Screen::display(pgm::read(&chargeScreens[screen_nr]));
             }
-
             {
-                //change displayed screen
-                key =  Keyboard::getPressedWithSpeed();
-                if(key == BUTTON_INC && pgm::read(&chargeScreens[screen_nr+1]) != Screen::ScreenEnd)
-                    { 
+            //change displayed screen
+            key =  Keyboard::getPressedWithSpeed();
+
+			if(key == BUTTON_START) {
+				if(Keyboard::getSpeed() || OnTheFly_ == 2) OnTheFly_ = 0;
+				else OnTheFly_ = 1;
+			}
+			else if(OnTheFly_ == 1 && key == BUTTON_NONE) OnTheFly_++;
+			
+			if(OnTheFly_ == 2) {		// && pgm::read(&chargeScreens[screen_nr]) == Screen::ScreenFirst
+				switch(pgm::read(&chargeScreens[screen_nr])) {
+					case Screen::ScreenFirst:
+						if(Discharger::isWorking()) {
+							if(key == BUTTON_DEC) {
+								ProgramData::currentProgramData.changeId(-1);
+								TheveninDischargeStrategy::setVI(1, ProgramData::currentProgramData.battery.Id);
+							}
+							if(key == BUTTON_INC) {
+								ProgramData::currentProgramData.changeId(1);
+								TheveninDischargeStrategy::setVI(1, ProgramData::currentProgramData.battery.Id);
+							}
+						}
+						if(SMPS::isWorking()) {
+							if(key == BUTTON_DEC) {
+								ProgramData::currentProgramData.changeIc(-1);
+								TheveninChargeStrategy::setVIB(1, ProgramData::currentProgramData.battery.Ic, true);
+							}
+							if(key == BUTTON_INC) {
+								ProgramData::currentProgramData.changeIc(1);
+								TheveninChargeStrategy::setVIB(1, ProgramData::currentProgramData.battery.Ic, true);
+							}
+						}
+						break;
+						
+					case Screen::ScreenCIVlimits:
+						if(SMPS::isWorking() || Discharger::isWorking()) {
+							if(key == BUTTON_DEC) {
+								change0ToMaxSmart(Monitor::c_limit, -1, PROGRAM_DATA_MAX_CHARGE,0,10);
+							}
+							if(key == BUTTON_INC) {
+								change0ToMaxSmart(Monitor::c_limit, 1, PROGRAM_DATA_MAX_CHARGE,0,10);
+							}
+						}
+						break;
+
+					case Screen::ScreenStartInfo:
+							if(key == BUTTON_DEC) {
+								ProgramData::currentProgramData.changeVoltage(-1);
+							}
+							if(key == BUTTON_INC) {
+								ProgramData::currentProgramData.changeVoltage(1);
+							}
+						break;
+
+					default:
+						break;
+				}
+			}
+					
+			else {
+				if(key == BUTTON_INC && pgm::read(&chargeScreens[screen_nr+1]) != Screen::ScreenEnd) {
 #ifndef ENABLE_T_INTERNAL //TODO: after program complete, reconnect battery but wrong cell measurement if disconnected
-        if(status == Strategy::COMPLETE) {hardware::setBatteryOutput(true); }  // ADD THIS LINE TO TURN ON THE FAN
+					if(status == Strategy::COMPLETE) {hardware::setBatteryOutput(true); }  // ADD THIS LINE TO TURN ON THE FAN
 #endif
 
 #ifdef ENABLE_SCREENANIMATION
-                      Screen::displayAnimation(); 
-#endif                     
-                      screen_nr++;
-                    }
-                if(key == BUTTON_DEC && screen_nr > 0) 
-                    {
-#ifdef ENABLE_SCREENANIMATION
-                      Screen::displayAnimation();
+					Screen::displayAnimation();
 #endif
-                      screen_nr--;
-                    }
-                    
+					screen_nr++;
+				}
+				if(key == BUTTON_DEC && screen_nr > 0) {
+#ifdef ENABLE_SCREENANIMATION
+					Screen::displayAnimation();
+#endif
+					screen_nr--;
+                }
+            }
             }
 
             if(run) {
@@ -134,7 +197,8 @@ namespace Strategy {
             }
             if(!run && exitImmediately)
                 return status;
-        } while(key != BUTTON_STOP);
+
+        } while(key != BUTTON_STOP || !Keyboard::getSpeed());
 
         Screen::powerOff();
         strategyPowerOff();

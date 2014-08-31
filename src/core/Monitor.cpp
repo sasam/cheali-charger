@@ -40,6 +40,7 @@ namespace Monitor {
 
 uint16_t VoutMaxMesured_;
 uint16_t VoutMinMesured_;
+AnalogInputs::ValueType c_limit;		//ign
 
 #ifdef MONITOR_T_INTERNAL_FAN
     AnalogInputs::ValueType monitor_on_T;
@@ -74,6 +75,7 @@ void Monitor::powerOn() {
     VoutMaxMesured_ = AnalogInputs::reverseCalibrateValue(AnalogInputs::Vout_plus_pin, MAX_CHARGE_V+ANALOG_VOLT(3.000));
     VoutMinMesured_ = AnalogInputs::reverseCalibrateValue(AnalogInputs::Vout_plus_pin, AnalogInputs::CONNECTED_MIN_VOLTAGE);
     update();
+	c_limit  = ProgramData::currentProgramData.getCapacityLimit();
 }
 
 
@@ -141,10 +143,9 @@ Strategy::statusType Monitor::run()
     }
 
     AnalogInputs::ValueType c = AnalogInputs::getRealValue(AnalogInputs::Cout);
-    AnalogInputs::ValueType c_limit  = ProgramData::currentProgramData.getCapacityLimit();
-    if(c_limit != PROGRAM_DATA_MAX_CHARGE && c > c_limit) {
-        Program::stopReason_ = PSTR("CAP COFF");
-        return Strategy::ERROR;
+    if(c_limit != PROGRAM_DATA_MAX_CHARGE && c >= c_limit) {
+        Program::stopReason_ = PSTR("CAP limit");
+        return Strategy::COMPLETE;		//ign   Do not want to stop cycling
     }
     
 #ifdef ENABLE_TIME_LIMIT      
@@ -154,7 +155,7 @@ Strategy::statusType Monitor::run()
         uint16_t chargeMin = Screen::getTotalChargDischargeTime();
         uint16_t time_limit  = ProgramData::currentProgramData.getTimeLimit();
         if(chargeMin >= time_limit) {
-            Program::stopReason_ = PSTR("T limit");
+            Program::stopReason_ = PSTR("Time limit");
             return Strategy::ERROR;
         }               
     }
@@ -164,7 +165,7 @@ Strategy::statusType Monitor::run()
     if(settings.externT_) {
         AnalogInputs::ValueType Textern = AnalogInputs::getRealValue(AnalogInputs::Textern);
         if(Textern > settings.externTCO_) {
-            Program::stopReason_ = PSTR("EXT TCOF");
+            Program::stopReason_ = PSTR("EXT T limit");
             return Strategy::ERROR;
         }
     }

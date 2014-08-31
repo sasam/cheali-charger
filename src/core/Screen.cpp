@@ -25,6 +25,8 @@
 #include "Program.h"
 #include "DelayStrategy.h"
 
+#include "Strategy.h"	//ign
+#include "Monitor.h"	//ign
 
  #ifdef ENABLE_RAM_CG
    #define BALANCE_FULL_CELL_CHAR   2
@@ -256,7 +258,17 @@ void Screen::printChar_Time() {
 void Screen::displayScreenFirst()
 {
     lcdSetCursor0_0();
-    printCharge();
+ 	if(Strategy::OnTheFly_ == 2) {		//ign
+		if(Discharger::isWorking()) {		//ign
+			lcdPrintUnsigned(ProgramData::currentProgramData.battery.Id, 6);		//ign
+			lcdPrint_P(PSTR("mA "));	//ign
+		}		//ign
+		if(SMPS::isWorking()) {		//ign
+			lcdPrintUnsigned(ProgramData::currentProgramData.battery.Ic, 6);		//ign
+			lcdPrint_P(PSTR("mA "));   //ign
+		}		//ign
+	}		//ign
+	else printCharge();
     AnalogInputs::printRealValue(AnalogInputs::Iout,     7);
     lcdPrintSpaces();
 
@@ -269,7 +281,14 @@ void Screen::displayScreenFirst()
 void Screen::displayScreenCIVlimits()
 {
     lcdSetCursor0_0();
-    lcdPrintCharge(ProgramData::currentProgramData.getCapacityLimit(), 8);
+ 	if(Strategy::OnTheFly_ == 2) {		//ign
+		lcdPrintUnsigned(Monitor::c_limit, 6);		//ign
+		lcdPrint_P(PSTR("< "));	//ign
+	}		//ign
+	else {
+		lcdPrintUnsigned(Monitor::c_limit, 5);		//ign
+		lcdPrint_P(PSTR("mAh"));	//ign
+	}		//ign
     lcdPrintChar(' ');
     lcdPrintCurrent(TheveninMethod::getImax(), 7);  //failed value on Nixx
     //ProgramData::currentProgramData.printIcString();
@@ -515,9 +534,11 @@ void Screen::displayStartInfo()
     resetCycleHistory();
     lcdSetCursor0_0();
     ProgramData::currentProgramData.printBatteryString(4);
-    lcdPrintChar(' ');
+	if(Strategy::OnTheFly_ == 2) lcdPrintChar('>');
+    else lcdPrintChar(' ');
     ProgramData::currentProgramData.printVoltageString();
-    lcdPrintChar(' ');
+	if(Strategy::OnTheFly_ == 2) lcdPrintChar('<');
+    else lcdPrintChar(' ');
     printProgram2chars(Program::programType_);
 
     lcdSetCursor0_1();

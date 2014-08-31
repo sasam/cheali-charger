@@ -54,10 +54,10 @@ void StartInfoStrategy::powerOff()
 
 Strategy::statusType StartInfoStrategy::doStrategy()
 {
-    bool cell_nr, v_balance, v_out, balance;
+    bool cell_nr, v_balance, v_out = false, balance;		//ign  v_out = false
 
     cell_nr = v_balance = false;
-    v_out = ! AnalogInputs::isConnected(AnalogInputs::Vout);
+//    v_out = ! AnalogInputs::isConnected(AnalogInputs::Vout);		//ign  I need to charge 0-voltage batt's
 
     if(balancePort_) {
         uint8_t is_cells, should_be_cells;

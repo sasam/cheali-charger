@@ -25,6 +25,7 @@ namespace Monitor {
     void doIdle();
     void powerOn();
     void update();
+    extern AnalogInputs::ValueType c_limit;    //ign
 };
 
 

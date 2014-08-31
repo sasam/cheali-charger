@@ -100,14 +100,15 @@ AnalogInputs::ValueType TheveninMethod::getReadableWiresRth()
 void TheveninMethod::setVIB(AnalogInputs::ValueType Vend, AnalogInputs::ValueType i, bool balance)
 {
 
-     
+    if (Vend != 1) {     //ign
     Vend_ = Vend;
+    balance_ = balance;
+    }                    //ign
     maxValue_ = i;
     minValue_ = i /settings.Lixx_Imin_;    //default=10
         //low current
     if (maxValue_ < 50) { maxValue_ = 50; }
     if (minValue_ < 50) { minValue_ = 50; }
-    balance_ = balance;
 }
 
 void TheveninMethod::initialize(AnalogInputs::Name iName)

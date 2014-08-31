@@ -175,7 +175,7 @@ Strategy::statusType Program::runTheveninCharge(int minChargeC,  bool immediatel
 {
     TheveninChargeStrategy::setVIB(ProgramData::currentProgramData.getVoltage(ProgramData::VCharge),
             ProgramData::currentProgramData.battery.Ic, false);
-    TheveninChargeStrategy::setMinI(ProgramData::currentProgramData.battery.Ic/minChargeC);
+    //TheveninChargeStrategy::setMinI(ProgramData::currentProgramData.battery.Ic/minChargeC);		//ign   incompatible with my mod
     Strategy::strategy_ = &TheveninChargeStrategy::vtable;
     return doStrategy(theveninScreens, immediately);
 }
@@ -308,18 +308,8 @@ void Program::run(ProgramType prog)
             break;
            
         case Program::DCcycleLiXX:
-            if (settings.forceBalancePort_)
-            {
               runDCcycle(1);  //1= lixx
               break;
-           }
-           else
-           {
-            // Program::stopReason_ = PSTR("NEED BALANCER");
-            Screen::displayStrings(PSTR("NEED force bal."),  PSTR("set. --> YES"));
-            Timer::delay(2000);
-             break;
-           }
         case Program::DCcycleNiXX:
             runDCcycle(0);   //0 = nixx
             break;
@@ -421,7 +411,8 @@ Strategy::statusType Program::runCycleChargeCommon(uint8_t prog1, bool mode)
           if (tempCDcycles_ != settings.CDcycles_)
            {
               if(prog1 == 1)  //1 is lixx  //0 is nixx
-              { status =  runTheveninChargeBalance(mode); } //independent exit
+              { if (settings.forceBalancePort_) status =  runTheveninChargeBalance(mode);		//ign
+                else status =  runTheveninCharge(settings.Lixx_Imin_, mode); } //independent exit		//ign
              if(prog1 == 0)     //nixx
               { status =  runDeltaCharge(mode); } //independent exit  
              if(prog1 == 2)  //pb
@@ -430,7 +421,8 @@ Strategy::statusType Program::runCycleChargeCommon(uint8_t prog1, bool mode)
            else 
            {
               if(prog1 == 1)
-              { status = runTheveninChargeBalance(); } //normal exit point
+              { if (settings.forceBalancePort_) status = runTheveninChargeBalance();		//ign
+                else status =  runTheveninCharge(settings.Lixx_Imin_); } //normal exit point		//ign
                if(prog1 == 0)   //nixx
               { status = runDeltaCharge();  } //normal exit point
               if(prog1 == 2)  //pb

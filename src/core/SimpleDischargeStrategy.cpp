@@ -23,8 +23,10 @@
 namespace SimpleDischargeStrategy {
     AnalogInputs::ValueType I_;
     AnalogInputs::ValueType V_;
-    void setVI(AnalogInputs::ValueType V, AnalogInputs::ValueType I) { I_ = I; V_ = V; };
-
+    void setVI(AnalogInputs::ValueType V, AnalogInputs::ValueType I) {
+		if(V != 1) V_ = V;
+		I_ = I;
+	}
 }
 
 void SimpleDischargeStrategy::powerOff()
