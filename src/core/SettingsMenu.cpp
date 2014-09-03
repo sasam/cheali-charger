@@ -49,8 +49,12 @@ const char string_view[]        PROGMEM = "UART: ";
 const char string_speed[]       PROGMEM = "speed: ";
 const char string_reset[]       PROGMEM = "   reset";
 
+const char string_baudoffset[]        PROGMEM = "OFFSET: "; // dodano
+
 const char * const SettingsStaticMenu[] PROGMEM =
 {
+        string_baudoffset,  // dodano
+
 #ifdef ENABLE_LCD_BACKLIGHT
         string_backlight,
 #endif
@@ -90,6 +94,8 @@ uint8_t SettingsMenu::printItem(uint8_t index)
     if(getBlinkIndex() != index) {
         START_CASE_COUNTER;
         switch (index) {
+        case NEXT_CASE:     lcdPrintUnsigned(p_.baud_offset_, 6);   break; // dodano
+
 #ifdef ENABLE_LCD_BACKLIGHT
             case NEXT_CASE:     lcdPrintUnsigned(p_.backlight_, 3);     break;
 #endif
@@ -125,6 +131,8 @@ void SettingsMenu::editItem(uint8_t index, uint8_t key)
 //    dir *= keyboard.getSpeedFactor();
     START_CASE_COUNTER;
     switch(index) {
+    case NEXT_CASE:     change0ToMaxSmart(p_.baud_offset_, dir, 9000,10);		break; // dodano
+
 #ifdef ENABLE_LCD_BACKLIGHT
         case NEXT_CASE:     changeBacklight(dir);                                   break;
 #endif
@@ -150,7 +158,7 @@ void SettingsMenu::editItem(uint8_t index, uint8_t key)
         case NEXT_CASE:     changeBalanceError(p_.balancerError_, dir);             break;
         case NEXT_CASE:     changeUART(dir);                                        break;
         case NEXT_CASE:     change0ToMax(p_.UARTspeed_, dir, Settings::UARTSpeeds-1); break;
-    }
+      }
 }
 
 void SettingsMenu::run() {

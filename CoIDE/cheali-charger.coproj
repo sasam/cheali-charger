@@ -170,9 +170,9 @@
     <File name="core/Utils.h" path="../src/core/Utils.h" type="1"/>
     <File name="core/Version.cpp" path="../src/core/Version.cpp" type="1"/>
     <File name="core/ARM/startup_M051Series.c" path="../src/core/ARM-Cortex-M0/startup_M051Series.c" type="1"/>
+    <File name="core/Blink.h" path="../src/core/Blink.h" type="1"/>
     <File name="core/StaticMenu.h" path="../src/core/StaticMenu.h" type="1"/>
     <File name="core/SimpleChargeStrategy.h" path="../src/core/SimpleChargeStrategy.h" type="1"/>
-    <File name="core/Blink.h" path="../src/core/Blink.h" type="1"/>
     <File name="core/AnalogInputsTypes.h" path="../src/core/AnalogInputsTypes.h" type="1"/>
     <File name="core/ARM/CMSIS/StdDriver/src/clk.c" path="../src/core/ARM-Cortex-M0/CMSIS/StdDriver/src/clk.c" type="1"/>
     <File name="core/ARM/CMSIS/StdDriver/inc/timer.h" path="../src/core/ARM-Cortex-M0/CMSIS/StdDriver/inc/timer.h" type="1"/>

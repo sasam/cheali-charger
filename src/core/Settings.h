@@ -46,6 +46,8 @@ struct Settings {
     uint16_t UART_;
     uint16_t UARTspeed_;
 
+    uint16_t baud_offset_;
+
     void edit();
     void check();
     void apply();

@@ -22,20 +22,27 @@
 #include "Hardware.h"
 #include "TxSoftSerial.h"
 
+#include "Settings.h"
+
 #include "IO.h"
+
+// int baudrate_offset;
 
 namespace Serial {
 
 #define Tx_BUFFER_SIZE	256
-#define Tx_FLAG_ENABLE	0x01
 
 #define START_BIT 0
 #define STOP_BIT 1024
+
+#define BAUD_OFFSET 1000
+
 
 uint8_t  pucTxBuffer[Tx_BUFFER_SIZE];
 uint16_t usTxBufferLen=Tx_BUFFER_SIZE;
 uint16_t usTxData;
 uint8_t *pucTxpin;
+
 
 volatile uint16_t usTxBufferRead;
 volatile uint16_t usTxBufferWrite;
@@ -52,6 +59,7 @@ void initialize()
     IO::pinMode(UART_TX_PIN, GPIO_PMD_OUTPUT);
 #endif
 
+//    baudrate_offset = BAUD_OFFSET;
 }
 
 void begin(unsigned long baud)
@@ -60,8 +68,7 @@ void begin(unsigned long baud)
     IO::disableFuncADC(IO::getPinBit(UART_TX_PIN));
     IO::pinMode(UART_TX_PIN, GPIO_PMD_OUTPUT);
 #endif
-
-    TIMER_Open(TIMER2, TIMER_PERIODIC_MODE, baud);
+    TIMER_Open(TIMER2, TIMER_PERIODIC_MODE, baud + settings.baud_offset_);
     TIMER_EnableInt(TIMER2);
     TIMER_Start(TIMER2);
 
@@ -96,6 +103,7 @@ void end()
 {
     TIMER_Stop(TIMER2);
     TIMER_DisableInt(TIMER2);
+    *(pucTxpin) = 1;
 }
 
 inline uint16_t getNewData() {
@@ -111,13 +119,13 @@ extern "C"
 {
 void TMR2_IRQHandler(void) {
     TIMER_ClearIntFlag(TIMER2);
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+//    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         if(usTxData) {
             *(pucTxpin) = usTxData & 1;
             usTxData >>= 1;
             return;
         }
-    }
+//    }
     usTxData = getNewData();
 }
 }
