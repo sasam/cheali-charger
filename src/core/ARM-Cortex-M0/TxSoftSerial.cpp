@@ -26,16 +26,13 @@
 
 #include "IO.h"
 
-// int baudrate_offset;
 
 namespace Serial {
 
 #define Tx_BUFFER_SIZE	256
 
 #define START_BIT 0
-#define STOP_BIT 1024
-
-#define BAUD_OFFSET 1000
+#define STOP_BIT 1536 // 512=1_STOP_BIT(N81) 1536=2_STOP_BITS(N82)
 
 
 uint8_t  pucTxBuffer[Tx_BUFFER_SIZE];
@@ -59,7 +56,6 @@ void initialize()
     IO::pinMode(UART_TX_PIN, GPIO_PMD_OUTPUT);
 #endif
 
-//    baudrate_offset = BAUD_OFFSET;
 }
 
 void begin(unsigned long baud)
@@ -103,13 +99,13 @@ void end()
 {
     TIMER_Stop(TIMER2);
     TIMER_DisableInt(TIMER2);
-    *(pucTxpin) = 1;
+//    *(pucTxpin) = 1;
 }
 
 inline uint16_t getNewData() {
     if(usTxBufferRead == usTxBufferWrite) return 0;
     uint16_t v = START_BIT + ((pucTxBuffer[usTxBufferRead]) << 1) + STOP_BIT;
-    if (++usTxBufferRead == usTxBufferLen) {
+    if(++usTxBufferRead == usTxBufferLen) {
         usTxBufferRead = 0;
     }
     return v;
