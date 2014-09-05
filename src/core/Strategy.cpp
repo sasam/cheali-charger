@@ -161,6 +161,7 @@ namespace Strategy {
 						break;
 
 					default:
+						OnTheFly_ = 0;
 						break;
 				}
 			}
