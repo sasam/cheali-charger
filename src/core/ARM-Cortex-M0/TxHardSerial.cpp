@@ -20,7 +20,7 @@
 */
 #include "atomic.h"
 #include "Hardware.h"
-#include  "uart.h"
+//#include  "uart.h"
 #include "TxHardSerial.h"
 
 #include "IO.h"
@@ -87,7 +87,7 @@ void flush()
 
 void end()
 {
-    NVIC_DisableIRQ(UART0_IRQn);
+//    NVIC_DisableIRQ(UART0_IRQn);
     UART0->IER = 0;
 }
 
