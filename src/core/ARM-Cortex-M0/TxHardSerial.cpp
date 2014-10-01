@@ -20,7 +20,6 @@
 */
 #include "atomic.h"
 #include "Hardware.h"
-//#include  "uart.h"
 #include "TxHardSerial.h"
 
 #include "IO.h"
@@ -56,7 +55,6 @@ void begin(unsigned long baud)
     UART0->LCR = UART_WORD_LEN_8 | UART_PARITY_NONE | UART_STOP_BIT_1;
     UART0->IER = UART_IER_THRE_IEN_Msk;
 
-//    UART_ENABLE_INT(UART0, UART_IER_THRE_IEN_Msk);
 //    NVIC_SetPriority(UART0_IRQn, HARD_SERIAL_IRQ_PRIORITY);
 
     usTxBufferRead = 0;

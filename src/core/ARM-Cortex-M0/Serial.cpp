@@ -37,62 +37,25 @@ void (*end)();
 void  begin(unsigned long baud)
 {
 #ifdef ENABLE_TX_HW_SERIAL
-	if(settings.UARTinput_ == Settings::Hardware) {
+    if(settings.UARTinput_ == Settings::Hardware) {
         write = &(TxHardSerial::write);
         flush = &(TxHardSerial::flush);
         end = &(TxHardSerial::end);
-		TxHardSerial::begin(baud);
-	} else {
-		write = &(TxSoftSerial::write);
-		flush = &(TxSoftSerial::flush);
+        TxHardSerial::begin(baud);
+    } else {
+        write = &(TxSoftSerial::write);
+        flush = &(TxSoftSerial::flush);
         end = &(TxSoftSerial::end);
         TxSoftSerial::begin(baud);
-	}
+    }
 #else
     write = &(TxSoftSerial::write);
     flush = &(TxSoftSerial::flush);
     end = &(TxSoftSerial::end);
-	TxSoftSerial::begin(baud);
+    TxSoftSerial::begin(baud);
 #endif
 };
 
-
-//void  write(uint8_t c)
-//{
-//#ifdef ENABLE_TX_HW_SERIAL
-//	if(settings.UARTinput_ == Settings::Hardware) {
-//		TxHardSerial::write(c);
-//	} else {
-//		TxSoftSerial::write(c);
-//	}
-//#else
-//	TxSoftSerial::write(c);
-//#endif
-//}
-
-//void  flush()
-//{
-//#ifdef ENABLE_TX_HW_SERIAL
-//	if(settings.UARTinput_ == Settings::Hardware) {
-//		TxHardSerial::flush();
-//	} else {
-//		TxSoftSerial::flush();
-//	}
-//#else
-//	TxSoftSerial::flush();
-//#endif
-//}
-//void  end() {
-//#ifdef ENABLE_TX_HW_SERIAL
-//	if(settings.UARTinput_ == Settings::Hardware) {
-//		TxHardSerial::end();
-//	} else {
-//		TxSoftSerial::end();
-//	}
-//#else
-//	TxSoftSerial::end();
-//#endif
-//}
 
 void  initialize() {
 #ifdef ENABLE_TX_HW_SERIAL
