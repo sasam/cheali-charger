@@ -26,6 +26,7 @@
 #include "DelayStrategy.h"
 
 #include "Strategy.h"	//ign
+#include "IO.h"			//ign
 #include "Monitor.h"	//ign
 
  #ifdef ENABLE_RAM_CG
@@ -57,7 +58,8 @@ namespace Screen{
     uint16_t etaSec = 0;
     uint16_t timeSecOldETACalc;
     uint16_t etaSecLarge = 0;
-    
+	
+	uint8_t scr;
     
     //TODO_NJ for cyclehistory  
     uint16_t cyclesHistoryChCapacity[5]   = {0,0,0,0,0};
@@ -324,7 +326,8 @@ void Screen::powerOff()
 
 void Screen::doSlowInterrupt()
 {
-   if(SMPS::isWorking() || Discharger::isWorking())
+   if(SMPS::isWorking() || Discharger::isWorking())		//ign
+//   if(!IO::digitalRead(SMPS_DISABLE_PIN) || !IO::digitalRead(DISCHARGE_DISABLE_PIN))		//ign
        totalChargDischargeTime_ += SLOW_INTERRUPT_PERIOD_MILISECONDS;
 
    if(Balancer::isWorking())
@@ -613,20 +616,37 @@ void Screen::displayScreenCycles()
      if (toggleTextCycleCounter_ >  Program::currentCycle()) toggleTextCycleCounter_ = 1;  
    }
    
-   c=toggleTextCycleCounter_-1;
+	switch(Strategy::OnTheFly_) {
+		case 2:
+			break;
+		case 3:
+			if (!scr) scr = Program::currentCycle()-1;
+			else scr--;
+			Strategy::OnTheFly_ = 2;
+			break;
+		case 4:
+			if (scr >= Program::currentCycle()-1) scr = 0;
+			else scr++;
+			Strategy::OnTheFly_ = 2;
+			break;
+		default:
+			scr = toggleTextCycleCounter_-1;
+			break;
+	}
    lcdSetCursor0_0();
-   lcdPrintUnsigned(toggleTextCycleCounter_, 1);
-   lcdPrintChar(BALANCE_EMPTY_CELL_CHAR);
-   lcdPrintTime(cyclesHistoryDcTime[c]);
-   lcdPrintSpaces(1);
-   lcdPrintChar(BALANCE_FULL_CELL_CHAR);
-   lcdPrintTime(cyclesHistoryChTime[c]);
-   lcdPrintSpaces();
-   
-   lcdSetCursor0_1();
-   lcdPrintCharge(cyclesHistoryDcCapacity[c],8);
-   lcdPrintCharge(cyclesHistoryChCapacity[c],8);
-   lcdPrintSpaces();  
+    //lcdPrintUnsigned(toggleTextCycleCounter_, 1);
+    lcdPrintUnsigned(scr+1, 1);
+    lcdPrintChar(BALANCE_EMPTY_CELL_CHAR);
+    lcdPrintTime(cyclesHistoryDcTime[scr]);
+    lcdPrintSpaces(1);
+    lcdPrintChar(BALANCE_FULL_CELL_CHAR);
+    lcdPrintTime(cyclesHistoryChTime[scr]);
+    lcdPrintSpaces();
+
+    lcdSetCursor0_1();
+    lcdPrintCharge(cyclesHistoryDcCapacity[scr],8);
+    lcdPrintCharge(cyclesHistoryChCapacity[scr],8);
+    lcdPrintSpaces();
 }
 
 void Screen::displayScreenEnergy()

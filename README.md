@@ -4,11 +4,14 @@ FOR TESTING.
 Plus Features
 -------------
 
-+ On-the-fly adjustable current (except NiMH and NiCD)
+new
++ Manual/Automatic scrolling for Cycle History screens
+
++ On-the-fly adjustable current (NiMH and NiCD - need STOP/START)
 + adjustable voltage (before process)
 + On-the-fly adjustable capacity limit (limits screen)
 + batteries can be charged from 0 voltage
-+ long press Stop key for stop - prevents accidental stop with loosing data.
++ long press Stop key for stop - prevents accidental stop with loosing data
 
 
 Now it is possible to change main parameters while charging discharging and cycling.

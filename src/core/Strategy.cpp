@@ -24,7 +24,7 @@
 #include "PolarityCheck.h"
 #include "AnalogInputs.h"
 
-
+#include "IO.h"			//ign
 #include "ProgramData.h" 	 //ign
 #include "TheveninChargeStrategy.h"		//ign
 #include "TheveninDischargeStrategy.h"		//ign
@@ -110,15 +110,16 @@ namespace Strategy {
             key =  Keyboard::getPressedWithSpeed();
 
 			if(key == BUTTON_START) {
-				if(Keyboard::getSpeed() || OnTheFly_ == 2) OnTheFly_ = 0;
+				if(Keyboard::getSpeed() || OnTheFly_ >= 2) OnTheFly_ = 0;
 				else OnTheFly_ = 1;
 			}
 			else if(OnTheFly_ == 1 && key == BUTTON_NONE) OnTheFly_++;
 			
-			if(OnTheFly_ == 2) {		// && pgm::read(&chargeScreens[screen_nr]) == Screen::ScreenFirst
+			if(OnTheFly_ >= 2) {		// && pgm::read(&chargeScreens[screen_nr]) == Screen::ScreenFirst
 				switch(pgm::read(&chargeScreens[screen_nr])) {
 					case Screen::ScreenFirst:
-						if(Discharger::isWorking()) {
+						//if(Discharger::isWorking()) {
+						if(!IO::digitalRead(DISCHARGE_DISABLE_PIN)) {
 							if(key == BUTTON_DEC) {
 								ProgramData::currentProgramData.changeId(-1);
 								TheveninDischargeStrategy::setVI(1, ProgramData::currentProgramData.battery.Id);
@@ -128,7 +129,8 @@ namespace Strategy {
 								TheveninDischargeStrategy::setVI(1, ProgramData::currentProgramData.battery.Id);
 							}
 						}
-						if(SMPS::isWorking()) {
+						//if(SMPS::isWorking()) {
+						if(!IO::digitalRead(SMPS_DISABLE_PIN)) {
 							if(key == BUTTON_DEC) {
 								ProgramData::currentProgramData.changeIc(-1);
 								TheveninChargeStrategy::setVIB(1, ProgramData::currentProgramData.battery.Ic, true);
@@ -141,7 +143,8 @@ namespace Strategy {
 						break;
 						
 					case Screen::ScreenCIVlimits:
-						if(SMPS::isWorking() || Discharger::isWorking()) {
+						//if(SMPS::isWorking() || Discharger::isWorking()) {
+						if(!IO::digitalRead(SMPS_DISABLE_PIN) || !IO::digitalRead(DISCHARGE_DISABLE_PIN)) {
 							if(key == BUTTON_DEC) {
 								change0ToMaxSmart(Monitor::c_limit, -1, PROGRAM_DATA_MAX_CHARGE,0,10);
 							}
@@ -157,6 +160,15 @@ namespace Strategy {
 							}
 							if(key == BUTTON_INC) {
 								ProgramData::currentProgramData.changeVoltage(1);
+							}
+						break;
+						
+					case Screen::ScreenCycles:
+							if(key == BUTTON_DEC) {
+								OnTheFly_ = 3;
+							}
+							if(key == BUTTON_INC) {
+								OnTheFly_ = 4;
 							}
 						break;
 
