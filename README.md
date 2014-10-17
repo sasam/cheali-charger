@@ -5,8 +5,12 @@ Plus Features
 -------------
 
 new
-+ Manual/Automatic scrolling for Cycle History screens
++ Dynamicly calculated maximum current
+Please do not work with batteries which use dynamic current mode at chargers without this feature
++ Freeze and show voltage and current at the end of charging/discharging
 
+
++ Manual/Automatic scrolling for Cycle History screens
 + On-the-fly adjustable current (NiMH and NiCD - need STOP/START)
 + adjustable voltage (before process)
 + On-the-fly adjustable capacity limit (limits screen)

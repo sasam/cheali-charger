@@ -47,9 +47,9 @@ namespace TheveninMethod {
 
  void setMinI(AnalogInputs::ValueType i) 
     {    
-     if (i < 30) 
+     if (i < 50) 
         { 
-            minValue_ = 30; 
+            minValue_ = 50; 
         }
         else
         {
@@ -65,8 +65,7 @@ namespace TheveninMethod {
 
     AnalogInputs::ValueType getImax()
     {
-        //return AnalogInputs::calibrateValue(iName_, maxValue_);		//ign_mA
-        return maxValue_;		//ign_mA
+        return AnalogInputs::calibrateValue(iName_, maxValue_);
     }
 
     bool isBelowMin(AnalogInputs::ValueType value)
@@ -112,8 +111,8 @@ void TheveninMethod::setVIB(AnalogInputs::ValueType Vend, AnalogInputs::ValueTyp
     maxValue_ = i;
     minValue_ = i /settings.Lixx_Imin_;    //default=10
         //low current
-    if (maxValue_ < 30) { maxValue_ = 30; }
-    if (minValue_ < 30) { minValue_ = 30; }
+    if (maxValue_ < 50) { maxValue_ = 50; }
+    if (minValue_ < 50) { minValue_ = 50; }
 }
 
 void TheveninMethod::initialize(AnalogInputs::Name iName)
@@ -224,20 +223,20 @@ AnalogInputs::ValueType TheveninMethod::normalizeI(AnalogInputs::ValueType value
     if(value > maxValue_) {
         value = maxValue_;
     }
-	
-#ifdef DYNAMIC_MAX_CURRENT
-	uint32_t i;
-	if(!IO::digitalRead(SMPS_DISABLE_PIN)) i = MAX_CHARGE_P;
-	else i = MAX_DISCHARGE_P;
-//	if(!IO::digitalRead(SMPS_DISABLE_PIN)) i =  ANALOG_WATT(2.000);
-//	else i =  ANALOG_WATT(2.000);
-	i *= ANALOG_VOLT(1);
-	i /= AnalogInputs::getVout();
-	if(value > i) value = i;
-#endif
 
+#ifdef DYNAMIC_CURRENT	
+uint32_t i;
+//if(!IO::digitalRead(SMPS_DISABLE_PIN)) i = MAX_CHARGE_P;
+//else i = MAX_DISCHARGE_P;
+if(!IO::digitalRead(SMPS_DISABLE_PIN)) i =  ANALOG_WATT(1.000);
+else i =  ANALOG_WATT(1.000);
+i *= ANALOG_VOLT(1);
+i /= AnalogInputs::getVout();
+if(value > i) value = i;	
+#endif
+	
     if(value < getMinValueB()) {
-        value = getMinValueB()/2;
+        value = getMinValueB();
     }
 
     if(oldValue != value) {
@@ -261,3 +260,24 @@ void TheveninMethod::storeOldValue(AnalogInputs::ValueType oldValue)
         tBal_[i].storeLast(vi, oldValue);
     }
 }
+
+/* 
+uint16_t TheveninMethod::getMaxIc(uint16_t voltage)
+{
+
+    uint32_t i;
+    uint16_t v;
+	
+	if(!IO::digitalRead(SMPS_DISABLE_PIN)) {
+    i = MAX_CHARGE_P;
+	else i = MAX_DISCHARGE_P;
+	
+    i *= ANALOG_VOLT(1);
+    i /= voltage;
+   
+
+    if(i > MAX_CHARGE_I)
+        i = MAX_CHARGE_I;
+    return i;
+}
+*/

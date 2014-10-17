@@ -22,6 +22,8 @@
 #include "Settings.h"
 #include "memory.h"
 
+//#include "SerialLog.h"    //ign
+
 namespace TheveninDischargeStrategy {
     const Strategy::VTable vtable PROGMEM = {
         powerOn,
@@ -52,20 +54,25 @@ void TheveninDischargeStrategy::powerOn()
 
 void TheveninDischargeStrategy::setVI(AnalogInputs::ValueType v, AnalogInputs::ValueType i)
 {
+//SerialLog::printString("TDS::setVI "); SerialLog::printUInt(v); SerialLog::printD(); SerialLog::printUInt(i);  //ign
+//SerialLog::printNL();  //ign
     SimpleDischargeStrategy::setVI(v,i);
-    TheveninMethod::setVIB(v, AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, i), false);
+//	TheveninMethod::setVIB(v, AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, i), false);		//ign_mA
+    TheveninMethod::setVIB(v, i, false);		//ign_mA
     setMinI(i/10);
 }
 void TheveninDischargeStrategy::setMinI(AnalogInputs::ValueType i)
 {
-    TheveninMethod::setMinI(AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, i));
+//	TheveninMethod::setMinI(AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, i));		//ign_mA
+    TheveninMethod::setMinI(i);		//ign_mA
 }
 
 Strategy::statusType TheveninDischargeStrategy::doStrategy()
 {
     bool stable;
     bool isEndVout = SimpleDischargeStrategy::isMinVout();
-    uint16_t oldValue = Discharger::getValue();
+    //uint16_t oldValue = Discharger::getValue();		//ign_mA
+    uint16_t oldValue = AnalogInputs::calibrateValue(AnalogInputs::IdischargeValue, Discharger::getValue());		//ign_mA
 
     //when discharging near the end, the battery voltage is very unstable
     //but we need new discharge values at that point
@@ -84,7 +91,8 @@ Strategy::statusType TheveninDischargeStrategy::doStrategy()
     if(stable) {
         uint16_t value = TheveninMethod::calculateNewValue(isEndVout, oldValue);
         if(value != oldValue) {
-            Discharger::setValue(value);
+//			Discharger::setValue(value);		//ign_mA
+            Discharger::setRealValue(value);		//ign_mA
         }
     }
     return Strategy::RUNNING;

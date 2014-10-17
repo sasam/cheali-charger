@@ -37,12 +37,24 @@ namespace Strategy {
 
     void chargingComplete() {
         lcdClear();
-        Screen::displayScreenProgramCompleted();
+        //Screen::displayScreenProgramCompleted();
 #ifndef ENABLE_T_INTERNAL
         hardware::setBatteryOutput(false); // ADD THIS LINE TO TURN OFF THE FAN
 #endif
         Buzzer::soundProgramComplete();
-        waitButtonPressed();
+#ifndef FREEZE_COMPLETED
+		Screen::displayScreenProgramCompleted();
+		waitButtonPressed();
+#else
+		AnalogInputs::powerOff();
+		do {
+			Screen::displayScreenProgramCompleted();
+			if(waitButtonPressedLimTime()) break;
+			Screen::displayScreenFirst();
+			if(waitButtonPressedLimTime()) break;
+		} while(true);
+		AnalogInputs::powerOn();
+#endif	
         Buzzer::soundOff();
 		hardware::setBatteryOutput(true);  //ign
     }
@@ -162,7 +174,7 @@ namespace Strategy {
 								ProgramData::currentProgramData.changeVoltage(1);
 							}
 						break;
-						
+#ifdef MANUAL_HISTORY
 					case Screen::ScreenCycles:
 							if(key == BUTTON_DEC) {
 								OnTheFly_ = 3;
@@ -171,7 +183,7 @@ namespace Strategy {
 								OnTheFly_ = 4;
 							}
 						break;
-
+#endif
 					default:
 						OnTheFly_ = 0;
 						break;

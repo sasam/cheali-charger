@@ -53,6 +53,9 @@ void change0ToMax(uint16_t &v, int direc, uint8_t max);
 void change1ToMax(uint16_t &v, int direc, uint8_t max);
 
 void waitButtonPressed();
+#ifdef FREEZE_COMPLETED
+bool waitButtonPressedLimTime();
+#endif
 uint8_t countElements(const char * const* staticMenu);
 
 

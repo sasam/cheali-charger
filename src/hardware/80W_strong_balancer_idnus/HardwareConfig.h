@@ -30,6 +30,14 @@
 
 #define CALIBRATION_SPEED                   10
 
+
+#define MANUAL_HISTORY
+
+#define FREEZE_COMPLETED
+
+//Do not work with batteries which use dynamic current mode at chargers without this feature!
+#define DYNAMIC_MAX_CURRENT
+
 //prevent power supply (>50W chargers)
 //#define ENABLE_SMOOTHCURRENT ANALOG_AMP(3.000)
 
@@ -40,7 +48,7 @@
 #define ENABLE_SCREENANIMATION
 
 //knightrider effect is ADC working
-#define ENABLE_KNIGHTRIDEREFFECT
+//#define ENABLE_KNIGHTRIDEREFFECT
 
 //use RAMCG battery icons for hitachi HD44780
 #define ENABLE_RAM_CG
@@ -49,7 +57,7 @@
 #define ENABLE_MUTEAUDIO
 
 //extended battery info (charge time limit)
-#define ENABLE_TIME_LIMIT    
+#define ENABLE_TIME_LIMIT
 
 //alternative battery name
 //#define ENABLE_ALTERNATIVE_BATTERY_NAME
@@ -60,3 +68,4 @@
 
 
 #endif /* HARDWARE_CONFIG_H_ */
+

@@ -28,10 +28,10 @@ void SimpleChargeStrategy::powerOn()
     AnalogInputs::ValueType I = ProgramData::currentProgramData.battery.Ic;
     AnalogInputs::ValueType Vc = ProgramData::currentProgramData.getVoltage(ProgramData::VCharge);
     I/=5; //start charging with 0.2CmAh
-    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, I);
-    TheveninMethod::setVIB(Vc, value, false);
+//    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, I);		//ign_mA
+    TheveninMethod::setVIB(Vc, I, false);		//ign_mA
     TheveninMethod::initialize(AnalogInputs::IsmpsValue);
-    SMPS::setValue(value);
+    SMPS::setRealValue(I);		//ign_mA
 }
 
 void SimpleChargeStrategy::powerOff()

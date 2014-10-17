@@ -23,6 +23,14 @@ namespace SerialLog {
     void doIdle();
     void powerOff();
     void sendCalibration();
+/*
+    void printChar(char c);   //ign
+    void printNL();           //ign
+    void printString(const char *s);   //ign
+    void printUInt(uint16_t x);        //ign
+    void printULong(uint32_t x);       //ign
+    void printD();           //ign
+*/
 } //namespace SerialLog
 
 

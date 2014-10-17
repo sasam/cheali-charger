@@ -291,14 +291,16 @@ void ProgramData::changeCharge(int direction)
 
 uint16_t ProgramData::getMaxIc() const
 {
-
     uint32_t i;
     uint16_t v;   
+#ifdef DYNAMIC_MAX_CURRENT
+    v = getVoltage(VDischarge);
+#else
     v = getVoltage(VCharge);
+#endif
     i = MAX_CHARGE_P;
     i *= ANALOG_VOLT(1);
     i /= v;
-   
 
     if(i > MAX_CHARGE_I)
         i = MAX_CHARGE_I;
@@ -308,13 +310,15 @@ uint16_t ProgramData::getMaxIc() const
 uint16_t ProgramData::getMaxId() const
 {
     uint32_t i;
-
     uint16_t v;
+#ifdef DYNAMIC_MAX_CURRENT
+    v = getVoltage(VDischarge);
+#else
     v = getVoltage(VCharge);
+#endif
     i = MAX_DISCHARGE_P;
     i *= ANALOG_VOLT(1);
     i /= v;
-
 
     if(i > MAX_DISCHARGE_I)
         i = MAX_DISCHARGE_I;

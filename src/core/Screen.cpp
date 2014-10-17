@@ -615,7 +615,7 @@ void Screen::displayScreenCycles()
       toggleTextCycleCounter_++ ;
      if (toggleTextCycleCounter_ >  Program::currentCycle()) toggleTextCycleCounter_ = 1;  
    }
-   
+#ifdef MANUAL_HISTORY
 	switch(Strategy::OnTheFly_) {
 		case 2:
 			break;
@@ -633,6 +633,9 @@ void Screen::displayScreenCycles()
 			scr = toggleTextCycleCounter_-1;
 			break;
 	}
+#else
+scr = toggleTextCycleCounter_-1;
+#endif
    lcdSetCursor0_0();
     //lcdPrintUnsigned(toggleTextCycleCounter_, 1);
     lcdPrintUnsigned(scr+1, 1);

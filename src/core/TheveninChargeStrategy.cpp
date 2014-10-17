@@ -49,18 +49,23 @@ void TheveninChargeStrategy::powerOn()
 
 void TheveninChargeStrategy::setVIB(AnalogInputs::ValueType v, AnalogInputs::ValueType i, bool balance)
 {
-       TheveninMethod::setVIB(v, AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, i), balance);
+//SerialLog::printString("TCS::setVIB "); SerialLog::printUInt(v); SerialLog::printD(); SerialLog::printUInt(i);  //ign
+//SerialLog::printNL();  //ign
+//	TheveninMethod::setVIB(v, AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, i), balance);		//ign_mA
+       TheveninMethod::setVIB(v, i, balance);		//ign_mA
 }
 void TheveninChargeStrategy::setMinI(AnalogInputs::ValueType i)
 {
-       TheveninMethod::setMinI(AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, i));
+//	TheveninMethod::setMinI(AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, i));		//ign_mA
+       TheveninMethod::setMinI(i);		//ign_mA
 }
 
 Strategy::statusType TheveninChargeStrategy::doStrategy()
 {
     bool update;
     bool isendVout = isEndVout();
-    uint16_t oldValue = SMPS::getValue();
+ //   uint16_t oldValue = SMPS::getValue();		//ign_mA
+    uint16_t oldValue = AnalogInputs::calibrateValue(AnalogInputs::IsmpsValue, SMPS::getValue());		//ign_mA
 
     //test if charge complete
     if(TheveninMethod::isComlete(isendVout, oldValue)) {
@@ -74,7 +79,8 @@ Strategy::statusType TheveninChargeStrategy::doStrategy()
     if(update && !Balancer::isWorking()) {
         uint16_t value = TheveninMethod::calculateNewValue(isendVout, oldValue);
         if(value != oldValue)
-            SMPS::setValue(value);
+//			SMPS::setValue(value);		//ign_mA
+            SMPS::setRealValue(value);		//ign_mA
     }
     return Strategy::RUNNING;
 }

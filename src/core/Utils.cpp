@@ -123,3 +123,14 @@ void waitButtonPressed()
     while(Keyboard::getPressedWithSpeed() != BUTTON_NONE);
     while(Keyboard::getPressedWithSpeed() == BUTTON_NONE);
 }
+
+#ifdef FREEZE_COMPLETED
+bool waitButtonPressedLimTime()
+{
+	for(uint8_t c = 0; c < 10; c++) {
+		if(Keyboard::getPressed()) return true;
+		Timer::delayIdle(100);
+	}
+	return false;
+}
+#endif

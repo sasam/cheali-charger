@@ -185,6 +185,7 @@ void printULong(uint32_t x)
 
 void sendHeader(uint16_t channel)
 {
+//return; //ign
     CRC = 0;
     printChar('$');
     printUInt(channel);
@@ -214,6 +215,7 @@ void sendEnd()
 
 void sendChannel1()
 {
+//return; //ign
     sendHeader(1);
     //analog inputs
     for(int8_t i=0;i < sizeOfArray(channel1);i++) {
@@ -327,6 +329,7 @@ void dumpCalibration()
 }
 void sendCalibration()
 {
+//return; //ign
     serialBegin();
     dumpCalibration();
     printNL();
