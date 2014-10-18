@@ -50,20 +50,26 @@ void SMPS::initialize()
 void SMPS::setValue(uint16_t value)
 {
     //if (settings.calibratedState_ >= 7) //disable limit if uncalibrated.
-    if (Program::programState_ != Program::Calibration)
+	
+/*	if (Program::programState_ != Program::Calibration)		//ign  Useless with mA
     {
-      if(value > settings.SMPS_Upperbound_Value_) value = settings.SMPS_Upperbound_Value_;     
-    }
+		if(value > settings.SMPS_Upperbound_Value_) value = settings.SMPS_Upperbound_Value_;     
+	} */
 
     value_ = SMPS::setSmoothI(value, value_);
-    hardware::setChargerValue(value_);
+	if (Program::programState_ != Program::Calibration)
+    {
+		if(value_ > MAX_CHARGE_I) value_ = MAX_CHARGE_I;
+		hardware::setChargerValue(AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, value_));     
+    }
+	else hardware::setChargerValue(value_);
     AnalogInputs::resetMeasurement();
 }
 
 void SMPS::setRealValue(uint16_t I)
 {
-    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, I);
-    setValue(value);
+//    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IsmpsValue, I);
+    setValue(I);
 }
 
 void SMPS::powerOn()

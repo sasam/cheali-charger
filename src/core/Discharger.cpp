@@ -47,10 +47,10 @@ void Discharger::initialize()
 void Discharger::setValue(uint16_t value)
 {
     //if (settings.calibratedState_ >= 7)
-    if (Program::programState_ != Program::Calibration)
+/*	if (Program::programState_ != Program::Calibration)		//ign  Useless with mA
     {
-        if(value > settings.DISCHARGER_Upperbound_Value_) value = settings.DISCHARGER_Upperbound_Value_;
-    }
+		if(value > settings.DISCHARGER_Upperbound_Value_) value = settings.DISCHARGER_Upperbound_Value_;
+	} */
     valueSet_ = value;
     finalizeValueTintern(true);
 }
@@ -76,15 +76,20 @@ void Discharger::finalizeValueTintern(bool force)
 
     if(v != value_ || force) {
         value_ = v;
-        hardware::setDischargerValue(value_);
+		if (Program::programState_ != Program::Calibration)
+		{
+			if(value_ > MAX_DISCHARGE_I) value_ = MAX_DISCHARGE_I;
+			hardware::setDischargerValue(AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, value_));
+		}
+        else hardware::setDischargerValue(value_);
         AnalogInputs::resetMeasurement();
     }
 }
 
 void Discharger::setRealValue(uint16_t I)
 {
-    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, I);
-    setValue(value);
+//    uint16_t value = AnalogInputs::reverseCalibrateValue(AnalogInputs::IdischargeValue, I);
+    setValue(I);
 }
 
 void Discharger::powerOn()

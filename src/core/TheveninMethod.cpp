@@ -237,7 +237,7 @@ AnalogInputs::ValueType TheveninMethod::normalizeI(AnalogInputs::ValueType value
 #endif
 
     if(value < getMinValueB()) {
-        value = getMinValueB()/2;
+        value = getMinValueB();
     }
 
     if(oldValue != value) {

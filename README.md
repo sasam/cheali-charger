@@ -6,9 +6,10 @@ Plus Features
 
 new
 + Dynamicly calculated maximum current
-Please do not work with batteries which use dynamic current mode at chargers without this feature
-+ Freeze and show voltage and current at the end of charging/discharging
 
+Please do not work with batteries which use dynamic current mode at chargers without this feature
++ Freeze and show voltage and current at the end of charging/discharging  
+___
 
 + Manual/Automatic scrolling for Cycle History screens
 + On-the-fly adjustable current (NiMH and NiCD - need STOP/START)

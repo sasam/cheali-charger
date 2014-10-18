@@ -64,8 +64,8 @@ Strategy::statusType TheveninChargeStrategy::doStrategy()
 {
     bool update;
     bool isendVout = isEndVout();
- //   uint16_t oldValue = SMPS::getValue();		//ign_mA
-    uint16_t oldValue = AnalogInputs::calibrateValue(AnalogInputs::IsmpsValue, SMPS::getValue());		//ign_mA
+    uint16_t oldValue = SMPS::getValue();
+ //   uint16_t oldValue = AnalogInputs::calibrateValue(AnalogInputs::IsmpsValue, SMPS::getValue());		//ign_mA
 
     //test if charge complete
     if(TheveninMethod::isComlete(isendVout, oldValue)) {
