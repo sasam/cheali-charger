@@ -272,7 +272,7 @@ void Program::run(ProgramType prog)
     programState_ = getProgramState(prog);  
 
     SerialLog::powerOn();
-    AnalogInputs::powerOn();
+    AnalogInputs::powerOn(true);
 
 
     if(startInfo()) {

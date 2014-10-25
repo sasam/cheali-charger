@@ -218,11 +218,11 @@ void AnalogInputs::reset()
     }
 }
 
-void AnalogInputs::powerOn()
+void AnalogInputs::powerOn(bool rset)
 {
     if(!on_) {
         hardware::setBatteryOutput(true);
-        reset();
+        if(rset) reset();
         on_ = true;
         doFullMeasurement();
     }
@@ -340,7 +340,7 @@ uint16_t AnalogInputs::getCharge()
 
 void AnalogInputs::doSlowInterrupt()
 {
-    i_charge_ += getIout();
+    if(on_) i_charge_ += getIout();
 }
 
 // finalize Measurement
