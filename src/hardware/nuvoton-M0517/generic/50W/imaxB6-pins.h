@@ -28,7 +28,7 @@
 #define RX_HW_SERIAL_PIN                5  //(5)        P3.0 - RXD[2], ACMP1_N
 //pin 6 - AVSS                             //(6)        AVSS
 //[HW Uart Tx pin: 7(P3.1) or 38(P0.2) - selectable (not connected)]
-#define TX_HW_SERIAL_PIN                7  //(7)        P3.1 - TXD[2], ACMP1_P
+#define TX_HW_SERIAL_PIN                38  //(7)        P3.1 - TXD[2], ACMP1_P
 #define BUTTON_STOP_PIN                 8  //(8)        P3.2 - nINT0, STADC, T0EX
 #define BUTTON_DEC_PIN                  9  //(9)        P3.3 - nINT1, MCLK, T1EX
 #define BUTTON_INC_PIN                  10 //(10)       P3.4 - T0, SDA

@@ -280,7 +280,7 @@ void SettingsMenu::printUART(uint8_t dig) const
 
 void SettingsMenu::printUARTinput(uint8_t dig) const
 {
-    lcdPrintSpaces(dig - 4);
+    lcdPrintSpaces(dig - 5);
     lcdPrint_P(SettingsUARTinput, p_.UARTinput);
 }
 

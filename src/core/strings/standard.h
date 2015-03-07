@@ -106,7 +106,13 @@ namespace settingsMenu {
 
     //UART input menu
     STRING(temp,    "temp");
-    STRING(pin7,    "pin7");
+//    STRING(pin7,    "pin7");
+
+#if TX_HW_SERIAL_PIN == 7
+    STRING(pin7,    " pin7"); //Tx on pin 7
+#else
+    STRING(pin7,    "pin38"); //Tx on pin 38
+#endif
 
     //UART view menu
     STRING(disable,     "disabled");
