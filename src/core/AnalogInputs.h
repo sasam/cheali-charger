@@ -20,31 +20,35 @@
 
 #include "AnalogInputsTypes.h"
 #include "HardwareConfig.h"
+#include "memory.h"
 
-#define MAX_CALIBRATION_POINTS 2
-#define DELTA_TIME_MILISECONDS 30000
+#define ANALOG_INPUTS_MAX_CALIBRATION_POINTS    2
+#define ANALOG_INPUTS_DELTA_TIME_MILISECONDS    30000
+#define ANALOG_INPUTS_RESOLUTION                16  // bits
 
+#define ANALOG_INPUTS_MAX_ADC_VALUE      (((1<<(ANALOG_INPUTS_ADC_RESOLUTION_BITS))-1) << ((ANALOG_INPUTS_RESOLUTION) - (ANALOG_INPUTS_ADC_RESOLUTION_BITS)))
 
-#define ANALOG_INPUTS_RESOLUTION         16  // bits
-#define STD_ANALOG_INPUTS_RESOLUTION     10  // bits
-#define MAKE_ANALOG_INPUTS_RESOLUTION(val, bits) ((val) << (ANALOG_INPUTS_RESOLUTION - (bits)))
-
-#define FOR_ALL_PHY_INPUTS(iterator) for(AnalogInputs::Name iterator = AnalogInputs::Name(0); iterator < AnalogInputs::PHYSICAL_INPUTS; iterator = AnalogInputs::Name(iterator + 1) )
-#define FOR_ALL_INPUTS(iterator)     for(AnalogInputs::Name iterator = AnalogInputs::Name(0); iterator < AnalogInputs::ALL_INPUTS;      iterator = AnalogInputs::Name(iterator + 1) )
+#define ANALOG_INPUTS_FOR_ALL_PHY(iterator) for(AnalogInputs::Name iterator = AnalogInputs::Name(0); iterator < AnalogInputs::PHYSICAL_INPUTS; iterator = AnalogInputs::Name(iterator + 1) )
+#define ANALOG_INPUTS_FOR_ALL(iterator)     for(AnalogInputs::Name iterator = AnalogInputs::Name(0); iterator < AnalogInputs::ALL_INPUTS;      iterator = AnalogInputs::Name(iterator + 1) )
 
 namespace AnalogInputs {
+
+    extern uint32_t tmp_time_;
+    extern uint32_t tmp_time_last_;
 
     struct CalibrationPoint {
         ValueType x;
         ValueType y;
-    };
+    } CHEALI_EEPROM_PACKED;
+
     struct DefaultValues {
         CalibrationPoint p0;
         CalibrationPoint p1;
-    };
+    } CHEALI_EEPROM_PACKED;
+
     struct Calibration {
-        CalibrationPoint p[MAX_CALIBRATION_POINTS];
-    };
+        CalibrationPoint p[ANALOG_INPUTS_MAX_CALIBRATION_POINTS];
+    } CHEALI_EEPROM_PACKED;
 
     enum Name {
         Vout_plus_pin,
@@ -70,8 +74,8 @@ namespace AnalogInputs {
         Vb8_pin,
 #endif
 
-        IsmpsValue,
-        IdischargeValue,
+        IsmpsSet,
+        IdischargeSet,
 
         VirtualInputs,
         Vout,
@@ -106,7 +110,6 @@ namespace AnalogInputs {
     };
     static const uint8_t    PHYSICAL_INPUTS     = VirtualInputs - Vout_plus_pin;
     static const uint8_t    ALL_INPUTS          = LastInput - Vout_plus_pin;
-    static const uint16_t   AVR_MAX_COUNT       = 100;
     static const ValueType  REVERSE_POLARITY_MIN_VOLTAGE = ANALOG_VOLT(1.000);
     static const ValueType  CONNECTED_MIN_VOLTAGE = ANALOG_VOLT(0.600);
     static const ValueType  CONNECTED_MIN_CURRENT = ANALOG_AMP(0.050);
@@ -117,11 +120,17 @@ namespace AnalogInputs {
     ValueType getRealValue(Name name);
     //get the ADC (measured) value - in this particular moment
     ValueType getADCValue(Name name);
+
+    // get battery voltage, can be Vout or balance port voltage (when connected)
+    ValueType getVbattery();
+    // get voltage on output
     ValueType getVout();
     ValueType getIout();
     ValueType getDeltaLastT();
     ValueType getDeltaCount();
     uint16_t getCharge();
+    void enableDeltaVoutMax(bool enable);
+
 
     uint8_t getConnectedBalancePorts();
 
@@ -133,6 +142,7 @@ namespace AnalogInputs {
     bool isOutStable();
     bool isStable(Name name);
     bool isConnected(Name name);
+    bool isBalancePortConnected();
     bool isReversePolarity();
     bool isPowerOn();
 
@@ -140,7 +150,7 @@ namespace AnalogInputs {
 
     void resetMeasurement();
     void resetAccumulatedMeasurements();
-    void powerOn(bool rset);
+    void powerOn(bool enableBatteryOutput = true, bool rset = true);
     void powerOff();
 
 

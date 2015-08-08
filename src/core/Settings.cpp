@@ -27,51 +27,32 @@
 #define SETTINGS_EXTERNAL_T_DEFAULT 0
 #endif
 
-#ifndef SETTINGS_DISCHARGE_AGGRESSIVE_LIXX_DEFAULT
-#define SETTINGS_DISCHARGE_AGGRESSIVE_LIXX_DEFAULT 1
-#endif
-
-#ifndef SETTINGS_DELTA_V_ENABLE_DEFAULT
-#define SETTINGS_DELTA_V_ENABLE_DEFAULT 1
-#endif
-
-#ifndef SETTINGS_FORCE_BALANCE_PORT_DEFAULT
-#define SETTINGS_FORCE_BALANCE_PORT_DEFAULT 1
+#ifndef SETTINGS_ADC_NOISE_DEFAULT
+#define SETTINGS_ADC_NOISE_DEFAULT 0
 #endif
 
 Settings settings;
 
 const Settings defaultSettings PROGMEM = {
-        70,                 //backlight_
-        ANALOG_CELCIUS(50), //fanTempOn_
-        ANALOG_CELCIUS(60), //dischargeTempOff_
-        SETTINGS_EXTERNAL_T_DEFAULT, //externT_
-        ANALOG_CELCIUS(60), //externTCO_
-        ANALOG_CELCIUS(1),  //deltaT_
-        SETTINGS_DELTA_V_ENABLE_DEFAULT, //enable_deltaV_
-        ANALOG_VOLT(0.005), //deltaV_NiMH_
-        ANALOG_VOLT(0.015), //deltaV_NiCd_
-        5,                  //CDcycles_
-        30,                 //WasteTime_
-#ifdef ENABLE_MUTEAUDIO        
-        1,                  //AudioBeep_ yes/no
-#endif        
-        10,                 //Lixx_Imin.
-        120,                //"%" capCutoff_
-        ANALOG_VOLT(7),     //inputVoltageLow_
-        ANALOG_VOLT(0),     //dischargeOffset_LiXX_
-        SETTINGS_DISCHARGE_AGGRESSIVE_LIXX_DEFAULT,     //dischargeAggressive_LiXX_
-        SETTINGS_FORCE_BALANCE_PORT_DEFAULT,            //forceBalancePort_
-        ANALOG_VOLT(0.008), //balancerError_
-        Settings::Disabled, //UART_ - disabled
-        0,                   //9600
-        0,                   //calibratedState_
-        0,                   //SMPS_Upperbound_Value_
-        0                    //DISCHARGER_Upperbound_Value_
+        70,                 //backlight
+        Settings::FanTemperature, //fanOn
+        ANALOG_CELCIUS(50), //fanTempOn
+        ANALOG_CELCIUS(60), //dischargeTempOff
+
+        1,                  //AudioBeep: yes/no
+        50,                 //minIc
+        50,                 //minId
+        ANALOG_VOLT(10.000),//inputVoltageLow
+
+        SETTINGS_ADC_NOISE_DEFAULT, //adcNoise
+        Settings::Disabled, //UART - disabled
+        3,                   //57600
+        Settings::Software, //UARToutput
+        Settings::MenuSimple, //menuType
 };
 
 
-const uint32_t Settings_speeds[Settings::UARTSpeeds] PROGMEM = {
+const uint32_t Settings::UARTSpeedValue[Settings::UARTSpeeds] PROGMEM = {
     9600,
     19200,
     38400,
@@ -81,7 +62,7 @@ const uint32_t Settings_speeds[Settings::UARTSpeeds] PROGMEM = {
 
 
 uint32_t Settings::getUARTspeed() const {
-    return pgm::read(&Settings_speeds[UARTspeed_]);
+    return pgm::read(&UARTSpeedValue[UARTspeed]);
 }
 
 void Settings::load() {
@@ -91,6 +72,8 @@ void Settings::load() {
 
 void Settings::save() {
     eeprom::write(&eeprom::data.settings, settings);
+    eeprom::restoreSettingsCRC();
+
     settings.apply();
 }
 
@@ -103,24 +86,10 @@ void Settings::restoreDefault() {
     Settings::save();
 }
 
-void Settings::check() {
-    if(CDcycles_>5) CDcycles_ = 5;
-}
-
 void Settings::apply() {
 #ifdef ENABLE_LCD_BACKLIGHT
-    hardware::setLCDBacklight(backlight_);
+    hardware::setLCDBacklight(backlight);
 #endif
-    Monitor::update();
-}
-
-
-void Settings::edit()
-{
-    SettingsMenu menu(*this);
-    menu.run();
-    *this = menu.p_;
-    save();
-    apply();
+//    hardware::setExternalTemperatueOutput(externT);
 }
 

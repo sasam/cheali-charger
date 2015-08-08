@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define __STDC_LIMIT_MACROS
 #include "Hardware.h"
 #include "AnalogInputsPrivate.h"
 #include "memory.h"
@@ -22,6 +23,19 @@
 #include "SerialLog.h"
 #include "eeprom.h"
 #include "atomic.h"
+#include "Balancer.h"
+
+
+#define ANALOG_INPUTS_ADC_MEASUREMENTS_COUNT (ANALOG_INPUTS_ADC_ROUND_MAX_COUNT*ANALOG_INPUTS_ADC_BURST_COUNT)
+
+#if (1<<ANALOG_INPUTS_RESOLUTION) * ANALOG_INPUTS_ADC_MEASUREMENTS_COUNT > UINT32_MAX
+#error "avr sum don't fit into uint32_t"
+#endif
+
+//TODO: 120?? we take not more then 60 measurements into account
+#if ((1<<ANALOG_INPUTS_RESOLUTION)>>ANALOG_INPUTS_ADC_DELTA_SHIFT) * ANALOG_INPUTS_ADC_MEASUREMENTS_COUNT * 120 > UINT32_MAX
+#error "delta avr sum don't fit into uint32_t"
+#endif
 
 
 #define RETURN_ATOMIC(x)  \
@@ -35,16 +49,19 @@
 
 namespace AnalogInputs {
 
-    bool on_;
-    uint16_t  i_avrCount_;
-    uint32_t  i_avrSum_[PHYSICAL_INPUTS];
-    ValueType i_adc_[PHYSICAL_INPUTS];
+    volatile bool on_;
+    volatile bool ignoreLastResult_;
+    volatile uint16_t  i_avrCount_;
+    volatile uint32_t  i_avrSum_[PHYSICAL_INPUTS];
+    volatile ValueType i_adc_[PHYSICAL_INPUTS];
 
     ValueType avrAdc_[PHYSICAL_INPUTS];
     ValueType real_[ALL_INPUTS];
     uint16_t stableCount_[ALL_INPUTS];
 
     uint16_t calculationCount_;
+    uint32_t tmp_time_;
+    uint32_t tmp_time_last_;
 
     uint16_t    i_deltaAvrCount_;
     uint32_t    i_deltaAvrSumVoutPlus_;
@@ -53,12 +70,14 @@ namespace AnalogInputs {
 
     uint16_t    deltaCount_;
     ValueType   deltaLastT_;
-    uint32_t    deltaStartTime_;
+    uint16_t    deltaStartTimeU16_;
+    bool        enable_deltaVoutMax_;
 
     uint32_t    i_charge_;
+    uint32_t    Eout_;
 
-    void resetAvr();
-    void resetDeltaAvr();
+    void _resetAvr();
+    void _resetDeltaAvr();
     void resetADC();
     void reset();
     void resetDelta();
@@ -72,10 +91,12 @@ namespace AnalogInputs {
     uint16_t getFullMeasurementCount()      { return calculationCount_; }
     ValueType getDeltaLastT()               { return deltaLastT_;}
     ValueType getDeltaCount()               { return deltaCount_;}
+    void enableDeltaVoutMax(bool enable)    { enable_deltaVoutMax_ = enable; }
 
     uint16_t getStableCount(Name name)      { return stableCount_[name]; };
     bool isStable(Name name)                { return getStableCount(name) >= STABLE_MIN_VALUE; };
     void setReal(Name name, ValueType real);
+    void setRealBasedOnAvr(AnalogInputs::Name name);
 
     void finalizeDeltaMeasurement();
     void finalizeFullMeasurement();
@@ -85,36 +106,30 @@ namespace AnalogInputs {
 } // namespace AnalogInputs
 
 //this method depends on the ADC implementation
-void AnalogInputs::resetADC()
-{
-    adc::reset();
-}
-
-//this method depends on the ADC implementation
 void AnalogInputs::doFullMeasurement()
 {
-    resetAvr();
-    resetDeltaAvr();
+    resetMeasurement();
     uint16_t c = getFullMeasurementCount();
     while(c == getFullMeasurementCount())
-        Timer::delayIdle(10);
+        Time::delayDoIdle(10);
 }
 
 
 void AnalogInputs::restoreDefault()
 {
     CalibrationPoint p;
-    FOR_ALL_PHY_INPUTS(name) {
+    ANALOG_INPUTS_FOR_ALL_PHY(name) {
         p = pgm::read<CalibrationPoint>(&inputsP_[name].p0);
         setCalibrationPoint(name, 0, p);
         p = pgm::read<CalibrationPoint>(&inputsP_[name].p1);
         setCalibrationPoint(name, 1, p);
     }
+    eeprom::restoreCalibrationCRC();
 }
 
 void AnalogInputs::getCalibrationPoint(CalibrationPoint &x, Name name, uint8_t i)
 {
-    if(name >= PHYSICAL_INPUTS || i >= MAX_CALIBRATION_POINTS) {
+    if(name >= PHYSICAL_INPUTS || i >= ANALOG_INPUTS_MAX_CALIBRATION_POINTS) {
         x.x = x.y = 1;
         return;
     }
@@ -122,7 +137,7 @@ void AnalogInputs::getCalibrationPoint(CalibrationPoint &x, Name name, uint8_t i
 }
 void AnalogInputs::setCalibrationPoint(Name name, uint8_t i, const CalibrationPoint &x)
 {
-    if(name >= PHYSICAL_INPUTS || i >= MAX_CALIBRATION_POINTS) return;
+    if(name >= PHYSICAL_INPUTS || i >= ANALOG_INPUTS_MAX_CALIBRATION_POINTS) return;
     eeprom::write<CalibrationPoint>(&eeprom::data.calibration[name].p[i], x);
 }
 
@@ -135,6 +150,9 @@ uint8_t AnalogInputs::getConnectedBalancePorts()
 }
 bool AnalogInputs::isConnected(Name name)
 {
+    if(name == Vbalancer) {
+        return getRealValue(VobInfo) == Vbalancer;
+    }
     AnalogInputs::ValueType x = getRealValue(name);
     switch(getType(name)) {
     case Current:
@@ -146,9 +164,20 @@ bool AnalogInputs::isConnected(Name name)
     }
 }
 
-AnalogInputs::ValueType AnalogInputs::getVout()
+bool AnalogInputs::isBalancePortConnected()
+{
+    return isConnected(Vbalancer);
+}
+
+
+AnalogInputs::ValueType AnalogInputs::getVbattery()
 {
     return getRealValue(VoutBalancer);
+}
+
+AnalogInputs::ValueType AnalogInputs::getVout()
+{
+    return getRealValue(Vout);
 }
 
 AnalogInputs::ValueType AnalogInputs::getIout()
@@ -161,37 +190,38 @@ bool AnalogInputs::isOutStable()
     return isStable(AnalogInputs::VoutBalancer) && isStable(AnalogInputs::Iout) && Balancer::isStable();
 }
 
-void AnalogInputs::resetAvr()
+void AnalogInputs::_resetAvr()
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        FOR_ALL_PHY_INPUTS(name) {
+        ANALOG_INPUTS_FOR_ALL_PHY(name) {
             i_avrSum_[name] = 0;
         }
-        i_avrCount_ = 0;
+        i_avrCount_ = ANALOG_INPUTS_ADC_ROUND_MAX_COUNT;
+        ignoreLastResult_ = false;
     }
 }
 
-void AnalogInputs::resetDeltaAvr()
+void AnalogInputs::_resetDeltaAvr()
 {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         i_deltaAvrCount_ = 0;
         i_deltaAvrSumVoutPlus_ = 0;
         i_deltaAvrSumVoutMinus_ = 0;
         i_deltaAvrSumTextern_ = 0;
-        deltaStartTime_ = Timer::getMiliseconds();
+        deltaStartTimeU16_ = Time::getMilisecondsU16();
     }
 }
 
 void AnalogInputs::resetDelta()
 {
-    resetDeltaAvr();
+    _resetDeltaAvr();
     deltaCount_ = 0;
     deltaLastT_ = 0;
 }
 
 void AnalogInputs::resetStable()
 {
-    FOR_ALL_INPUTS(name) {
+    ANALOG_INPUTS_FOR_ALL(name) {
         stableCount_[name] = 0;
     }
 }
@@ -199,29 +229,37 @@ void AnalogInputs::resetStable()
 
 void AnalogInputs::resetMeasurement()
 {
-    resetAvr();
-    resetDeltaAvr();
-    resetStable();
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        i_avrCount_ = 1; //TODO:??
+        ignoreLastResult_ = true;
+        resetStable();
+    }
+}
+
+void AnalogInputs::resetAccumulatedMeasurements()
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        i_charge_ = 0;
+		Eout_ = 0;
+    }
+    resetMeasurement();
+    resetDelta();
+    setReal(Cout, 0);
+    setReal(deltaVout, 0);
+    setReal(deltaVoutMax, 0);
+    setReal(deltaTextern, 0);
 }
 
 void AnalogInputs::reset()
 {
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        i_charge_ = 0;
-    }
     calculationCount_ = 0;
-    resetADC();
-    resetMeasurement();
-    resetDelta();
-    FOR_ALL_INPUTS(name){
-        real_[name] = 0;
-    }
+    resetAccumulatedMeasurements();
 }
 
-void AnalogInputs::powerOn(bool rset)
+void AnalogInputs::powerOn(bool enableBatteryOutput, bool rset)
 {
     if(!on_) {
-        hardware::setBatteryOutput(true);
+        hardware::setBatteryOutput(enableBatteryOutput);
         if(rset) reset();
         on_ = true;
         doFullMeasurement();
@@ -246,9 +284,8 @@ bool AnalogInputs::isReversePolarity()
 
 AnalogInputs::ValueType AnalogInputs::calibrateValue(Name name, ValueType x)
 {
-    
     //TODO: do this with more points
-    if (x==0) return 0;
+    if (x == 0) return 0;
     CalibrationPoint p0, p1;
     getCalibrationPoint(p0, name, 0);
     getCalibrationPoint(p1, name, 1);
@@ -266,7 +303,7 @@ AnalogInputs::ValueType AnalogInputs::calibrateValue(Name name, ValueType x)
 
 AnalogInputs::ValueType AnalogInputs::reverseCalibrateValue(Name name, ValueType y)
 {
-    if (y==0) return 0;
+    if (y == 0) return 0;
     //TODO: do this with more points
     CalibrationPoint p0, p1;
     getCalibrationPoint(p0, name, 0);
@@ -294,13 +331,11 @@ void AnalogInputs::initialize()
 AnalogInputs::Type AnalogInputs::getType(Name name)
 {
     switch(name){
-    case VirtualInputs:
-        return Unknown;
     case Iout:
     case Ismps:
-    case IsmpsValue:
+    case IsmpsSet:
     case Idischarge:
-    case IdischargeValue:
+    case IdischargeSet:
         return Current;
     case Tintern:
     case Textern:
@@ -318,7 +353,7 @@ void AnalogInputs::printRealValue(Name name, uint8_t dig)
 {
     ValueType x = getRealValue(name);
     Type t = getType(name);
-    lcdPrintAnalog(x, t, dig);
+    lcdPrintAnalog(x, dig, t);
 }
 
 uint16_t AnalogInputs::getCharge()
@@ -340,34 +375,42 @@ uint16_t AnalogInputs::getCharge()
 
 void AnalogInputs::doSlowInterrupt()
 {
-    if(on_) i_charge_ += getIout();
+	static uint8_t etime;
+	if(on_) {
+		i_charge_ += getIout();
+		if(etime++ > 87) {				//ign  Once per 10.015 sec
+			uint32_t E = getIout();
+			E *= getVout();
+			E /= 100;
+			Eout_ += E;
+			setReal(Eout, Eout_/36000);
+
+//			SerialLog::printString("AI::doSlowInterrupt"); //SerialLog::printUInt(c); SerialLog::printD(); SerialLog::printUInt(blink.blinkTime_);  //ign
+//			SerialLog::printNL();  //ign
+			etime = 0;
+		}
+	}
 }
 
 // finalize Measurement
 
 void AnalogInputs::intterruptFinalizeMeasurement()
 {
-    if(!AnalogInputs::isPowerOn())
-        return;
-
-    if(i_avrCount_ < AVR_MAX_COUNT) {
-        FOR_ALL_PHY_INPUTS(name) {
-            i_avrSum_[name] += i_adc_[name];
-        }
-        i_avrCount_++;
-    }
-
-    i_deltaAvrSumVoutPlus_    += i_adc_[Vout_plus_pin];
-    i_deltaAvrSumVoutMinus_   += i_adc_[Vout_minus_pin];
-    i_deltaAvrSumTextern_     += i_adc_[Textern];
-    i_deltaAvrCount_++;
+    if(i_avrCount_>0)
+        i_avrCount_--;
 }
 
 
 void AnalogInputs::doIdle()
 {
     finalizeFullMeasurement();
-    finalizeDeltaMeasurement();
+}
+
+void AnalogInputs::setRealBasedOnAvr(AnalogInputs::Name name)
+{
+    avrAdc_[name] = i_avrSum_[name] / ANALOG_INPUTS_ADC_MEASUREMENTS_COUNT;
+    ValueType real = calibrateValue(name, avrAdc_[name]);
+    setReal(name, real);
 }
 
 void AnalogInputs::finalizeFullMeasurement()
@@ -377,33 +420,47 @@ void AnalogInputs::finalizeFullMeasurement()
         avrCount = i_avrCount_;
     }
 
-    if(avrCount == AVR_MAX_COUNT) {
-        calculationCount_++;
-        FOR_ALL_PHY_INPUTS(name) {
-            avrAdc_[name] = i_avrSum_[name] / avrCount;
-            ValueType real = calibrateValue(name, avrAdc_[name]);
-            setReal(name, real);
+    if(avrCount == 0) {
+        if(!ignoreLastResult_) {
+            if(isPowerOn()) {
+                calculationCount_++;
+
+                i_deltaAvrSumVoutPlus_    += i_avrSum_[Vout_plus_pin] >> ANALOG_INPUTS_ADC_DELTA_SHIFT;
+                i_deltaAvrSumVoutMinus_   += i_avrSum_[Vout_minus_pin] >> ANALOG_INPUTS_ADC_DELTA_SHIFT;
+                i_deltaAvrSumTextern_     += i_avrSum_[Textern] >> ANALOG_INPUTS_ADC_DELTA_SHIFT;
+                i_deltaAvrCount_ ++;
+                finalizeDeltaMeasurement();
+
+                ANALOG_INPUTS_FOR_ALL_PHY(name) {
+                    setRealBasedOnAvr(name);
+                }
+                finalizeFullVirtualMeasurement();
+            } else {
+                //we need internal temperature all the time to control the fan
+                setRealBasedOnAvr(AnalogInputs::Tintern);
+            }
         }
-        finalizeFullVirtualMeasurement();
-        resetAvr();
+        _resetAvr();
     }
 }
 
 
 void AnalogInputs::finalizeDeltaMeasurement()
 {
-    if(Timer::getMiliseconds() - deltaStartTime_ > DELTA_TIME_MILISECONDS) {
-        uint16_t deltaAvrCount;
+    if(Time::diffU16(deltaStartTimeU16_, Time::getMilisecondsU16()) > ANALOG_INPUTS_DELTA_TIME_MILISECONDS) {
+        uint32_t deltaAvrCount;
         uint32_t deltaAvrSumVoutPlus;
         uint32_t deltaAvrSumVoutMinus;
         uint32_t deltaAvrSumTextern;
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             deltaAvrCount = i_deltaAvrCount_;
+            deltaAvrCount *= ANALOG_INPUTS_ADC_MEASUREMENTS_COUNT;
+            deltaAvrCount >>= ANALOG_INPUTS_ADC_DELTA_SHIFT;
             deltaAvrSumVoutPlus  = i_deltaAvrSumVoutPlus_;
             deltaAvrSumVoutMinus = i_deltaAvrSumVoutMinus_;
             deltaAvrSumTextern   = i_deltaAvrSumTextern_;
         }
-        resetDeltaAvr();
+        _resetDeltaAvr();
         deltaCount_++;
 
         uint16_t x;
@@ -421,14 +478,15 @@ void AnalogInputs::finalizeDeltaMeasurement()
             real = VoutPlus - VoutMinus;
 
         old = getRealValue(deltaVoutMax);
-        if(real >= old)
+        if(real >= old || (!enable_deltaVoutMax_)) {
             setReal(deltaVoutMax, real);
+        }
         setReal(deltaVout, real - old);
 
         //calculate deltaTextern
         uint16_t dc = 2;
-#if DELTA_TIME_MILISECONDS != 30000
-#error "DELTA_TIME_MILISECONDS != 30000"
+#if ANALOG_INPUTS_DELTA_TIME_MILISECONDS != 30000
+#error "ANALOG_INPUTS_DELTA_TIME_MILISECONDS != 30000"
 #endif
         deltaAvrSumTextern /= deltaAvrCount;
         x = deltaAvrSumTextern;
@@ -444,7 +502,6 @@ void AnalogInputs::finalizeDeltaMeasurement()
 
 void AnalogInputs::finalizeFullVirtualMeasurement()
 {
-    AnalogInputs::ValueType oneVolt = ANALOG_VOLT(1);
     AnalogInputs::ValueType balancer = 0;
     AnalogInputs::ValueType out_p = real_[Vout_plus_pin];
     AnalogInputs::ValueType out_m = real_[Vout_minus_pin];
@@ -479,7 +536,7 @@ void AnalogInputs::finalizeFullVirtualMeasurement()
 
     setReal(Vbalancer, balancer);
     AnalogInputs::Name obInfo;
-    if(balancer == 0 || absDiff(out, balancer) > oneVolt) {
+    if(balancer == 0 || absDiff(out, balancer) > ANALOG_VOLT(3.000)) {
         //balancer not connected or big error in calibration
         obInfo = Vout;
         ports = 0;
@@ -508,10 +565,13 @@ void AnalogInputs::finalizeFullVirtualMeasurement()
     setReal(Pout, P);
 
     //TODO: rewrite
-    uint32_t E = CoutValue;
-    E *= out;
-    E /= 10000;
-    setReal(Eout, E);
+//    uint32_t E = CoutValue;
+//    E *= out;
+//    E /= 10000;
+//    setReal(Eout, E);
+
+//SerialLog::printString("setReal"); //SerialLog::printUInt(c); SerialLog::printD(); SerialLog::printUInt(blink.blinkTime_);  //ign
+//SerialLog::printNL();  //ign
 }
 
 void AnalogInputs::setReal(Name name, ValueType real)
@@ -522,12 +582,5 @@ void AnalogInputs::setReal(Name name, ValueType real)
         stableCount_[name]++;
 
     real_[name] = real;
-}
-
-
-void AnalogInputs::resetAccumulatedMeasurements()
-{
-    i_charge_ = 0;
-    resetMeasurement();
 }
 

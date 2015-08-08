@@ -15,16 +15,30 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#define __STDC_LIMIT_MACROS
 #include "Utils.h"
 #include "Hardware.h"
+#include "AnalogInputs.h"
 #include "memory.h"
 
-uint8_t countElements(const char * const* staticMenu)
+void callVoidMethod_P(const VoidMethod * method)
+{
+    const VoidMethod voidMethod = pgm::read(method);
+    callVoidMethod(voidMethod);
+}
+void callVoidMethod(const VoidMethod method)
+{
+    method();
+}
+
+
+uint8_t countElements(const void * const array[])
 {
     uint8_t retu=0;
-    while(pgm::read(staticMenu++))
-        retu++;
+    if(array != 0) {
+        while(pgm::read(array++))
+            retu++;
+    }
 
     return retu;
 }
@@ -60,77 +74,82 @@ int8_t sign(int16_t x)
     return -1;
 }
 
-uint8_t digits(uint32_t x)
+uint8_t digits(uint16_t x)
+{
+    return digits((int32_t)x);
+}
+
+uint8_t digits(int32_t x)
 {
     uint8_t retu = 0;
+    if(x < 0) {
+        retu++;
+        x = -x;
+    }
     if(x == 0)
-        x=1;
+        retu=1;
     for(;x!=0; x/=10)
         retu++;
     return retu;
 }
 
-void change0ToMax(uint16_t &v, int dir, uint8_t max)
+void change0ToMax(uint16_t *v, int dir, uint8_t max)
 {
-    if( ((int)v) + dir< 0) v = 0;
-    else if(((int)v)+dir > max) v = max;
-    else v+=dir;
+    changeMinToMaxStep(v, dir, 0, max, 1);
 }
 
-void change1ToMax(uint16_t &v, int dir, uint8_t max)
+void change1ToMax(uint16_t *v, int dir, uint8_t max)
 {
-    if( ((int)v) + dir< 1) v = 1;
-    else if(((int)v)+dir > max) v = max;
-    else v+=dir;
+    changeMinToMaxStep(v, dir, 1, max, 1);
 }
 
-
-void change0ToMaxSmart(uint16_t &v, int dir, uint16_t max)
+void change0ToInfSmart(uint16_t *v, int dir)
 {
-    return change0ToMaxSmart(v, dir, max, 0, 0);
+    changeMinToMaxSmart(v, dir, 0, UINT16_MAX);
 }
 
-
-
-void change100ToMaxSmart(uint16_t &v, int dir, uint16_t max)
+void changeMinToMaxSmart(uint16_t *v, int dir, uint16_t min, uint16_t max)
 {
-    return change0ToMaxSmart(v, dir, max, 0, 100);
+    uint8_t dv = digits(*v);
+    uint16_t step = 1;
+    if(dv>1) step = pow10(dv-2);
+    changeMinToMaxStep(v, dir, min, max, step);
 }
 
-
-void change0ToMaxSmart(uint16_t &v, int dir, uint16_t max, int16_t step, uint8_t starting)
+void changeMinToMaxStep(uint16_t *v, int dir, uint16_t min, uint16_t max, uint16_t step)
 {
-    uint16_t r;
-
-    uint8_t dv = digits(v);
-    if(step == 0) {
-        step = 1;
-        if(dv>1) step = pow10(dv-2);
-    }
-
-    r = v%step;
+    uint16_t r = (*v)%step;
 
     if(r) {
         if(dir > 0) step -=r;
         else step = r;
     }
-    if(dir > 0) ADD_MAX(v, step, max);
-    else SUB_MIN(v, step ,starting);
+    if(dir > 0) ADD_MAX(*v, step, max);
+    else SUB_MIN(*v, step, min);
 }
 
-void waitButtonPressed()
+uint8_t waitButtonPressed()
 {
-    while(Keyboard::getPressedWithSpeed() != BUTTON_NONE);
-    while(Keyboard::getPressedWithSpeed() == BUTTON_NONE);
+    uint8_t key;
+
+    while(Keyboard::getPressedWithDelay() != BUTTON_NONE);
+
+    do {
+        key = Keyboard::getPressedWithDelay();
+    } while(key == BUTTON_NONE);
+
+    return key;
 }
 
 #ifdef FREEZE_COMPLETED
 bool waitButtonPressedLimTime()
 {
-	for(uint8_t c = 0; c < 10; c++) {
-		if(Keyboard::getPressed()) return true;
-		Timer::delayIdle(100);
-	}
-	return false;
+  for(uint8_t c = 0; c < 6; c++) {
+    if(Keyboard::getPressedWithDelay() != BUTTON_NONE) return true;
+//    if(Keyboard::getLast()) return true;
+//    Time::delayDoIdle(100);
+//    Time::delay(100);
+  }
+  return false;
 }
 #endif

@@ -21,45 +21,28 @@
 #include "ProgramData.h"
 #include "Strategy.h"
 
-class Program {
-public:
+namespace Program {
+
     enum ProgramType {
-        ChargeLiXX, ChargeLiXX_Balance, Balance, DischargeLiXX, FastChargeLiXX, StorageLiXX, StorageLiXX_Balance,
-        ChargeNiXX, DischargeNiXX,  DCcycleLiXX,  DCcycleNiXX,
-        ChargePb, DischargePb, FastChargePb, DCcyclePb,
-        EditBattery, LAST_PROGRAM_TYPE};
+        Charge, ChargeBalance, Balance, Discharge, FastCharge,
+        Storage, StorageBalance, DischargeChargeCycle, CapacityCheck,
+        EditBattery,
+        Calibrate,
+        LAST_PROGRAM_TYPE};
 
     enum ProgramState {
-        None, Info, Calibration, Done, Error,
-        Charging, ChargingBalancing, Discharging,DischargingCharging, Balancing, Storage,
+        Done, InProgress, Error, Info
     };
 
+    extern ProgramType programType;
+    extern ProgramState programState;
+    extern const char * stopReason;
 
+    void selectProgram(int index);
+    void run(ProgramType prog);
 
-    static ProgramType programType_;
-    static ProgramState programState_;
-    static const char * stopReason_;
-
-    static void selectProgram(int index);
-    static void run(ProgramType prog);
-
-
-    static void printStartInfo(ProgramType prog);
-    static bool startInfo();
-
-    static Strategy::statusType runStorage(bool balance, bool immediately);
-    static Strategy::statusType runTheveninCharge(int minChargeC, bool immediately);
-    static Strategy::statusType runDischarge(bool immediately);
-    static Strategy::statusType runNiXXDischarge(bool immediately);
-    static Strategy::statusType runWasteTime();
-    static Strategy::statusType runDCcycle(uint8_t prog1);
-    static Strategy::statusType runCycleDischargeCommon(uint8_t prog1); 
-    static Strategy::statusType runCycleChargeCommon(uint8_t prog1, bool mode);
-    static uint8_t currentCycle();
-    static char currentCycleMode();
-    static Strategy::statusType runTheveninChargeBalance( bool immediately);
-    static Strategy::statusType runBalance();
-    static Strategy::statusType runDeltaCharge( bool immediately);
+    Strategy::statusType runWithoutInfo(ProgramType prog);
+    void resetAccumulatedMeasurements();
 };
 
 

@@ -25,40 +25,33 @@
 struct Settings {
 
     enum UARTType {Disabled, Normal,  Debug,  ExtDebug, ExtDebugAdc};
-    static const uint8_t UARTSpeeds = 5;
-    static const AnalogInputs::ValueType TempDifference = ANALOG_CELCIUS(5);
-    static const AnalogInputs::ValueType MaxDischargeOffset_LiXX = ANALOG_VOLT(1.000);
-    uint16_t backlight_;
-    AnalogInputs::ValueType fanTempOn_;
-    AnalogInputs::ValueType dischargeTempOff_;
-    uint16_t externT_;
-    AnalogInputs::ValueType externTCO_;
-    AnalogInputs::ValueType deltaT_;
-    uint16_t enable_deltaV_;
-    AnalogInputs::ValueType deltaV_NiMH_, deltaV_NiCd_;
-    uint16_t CDcycles_;
-    uint16_t WasteTime_;
- #ifdef ENABLE_MUTEAUDIO   
-    uint16_t AudioBeep_;
- #endif   
-    uint16_t Lixx_Imin_;
-    uint16_t capCutoff_;
-    AnalogInputs::ValueType inputVoltageLow_;
-    AnalogInputs::ValueType dischargeOffset_LiXX_;
-    uint16_t dischargeAggressive_LiXX_;
-    uint16_t forceBalancePort_;
-    AnalogInputs::ValueType balancerError_;
-    uint16_t UART_;
-    uint16_t UARTspeed_;
-    uint16_t calibratedState_;
-    uint16_t SMPS_Upperbound_Value_;
-    uint16_t DISCHARGER_Upperbound_Value_;
+    enum FanOnType {FanDisabled, FanAlways, FanProgram, FanTemperature, FanProgramTemperature};
 
-    void edit();
-    void check();
+    enum UARTOutput {Software, HardwarePin7, HardwarePin38};
+    enum MenuType  {MenuSimple, MenuAdvanced};
+    static const uint16_t UARTSpeeds = 5;
+    static const AnalogInputs::ValueType TempDifference = ANALOG_CELCIUS(5.12);
+    uint16_t backlight;
+
+    AnalogInputs::ValueType fanOn;
+    AnalogInputs::ValueType fanTempOn;
+    AnalogInputs::ValueType dischargeTempOff;
+
+    uint16_t audioBeep;
+    uint16_t minIc;
+    uint16_t minId;
+
+    AnalogInputs::ValueType inputVoltageLow;
+    uint16_t adcNoise;
+    uint16_t UART;
+    uint16_t UARTspeed;
+    uint16_t UARToutput;
+    uint16_t menuType;
+
     void apply();
     void setDefault();
     uint32_t getUARTspeed() const;
+    static const uint32_t UARTSpeedValue[];
 
     static void load();
     static void save();
