@@ -113,7 +113,7 @@ const StaticEditMenu::StaticEditData editData[] PROGMEM = {
 {string_externTCO,      COND_enableT,       {CP_TYPE_TEMPERATURE,3,&battery.externTCO},     {Tstep, Tmin, Tmax}},
 
 {string_capCoff,        COND_BATTERY,       {CP_TYPE_PROCENTAGE,0,&battery.capCutoff},      {1, 1, 250}},
-{string_DCcycles,       COND_NiXX_Pb,       {CP_TYPE_UNSIGNED,0,&battery.DCcycles},         {1, 0, 5}},
+{string_DCcycles,       COND_BATT_UNKN,     {CP_TYPE_UNSIGNED,0,&battery.DCcycles},         {1, 0, 5}},
 {string_DCRestTime,     ADV(BATTERY),       {CP_TYPE_MINUTES,0,&battery.DCRestTime},        {1, 1, 99}},
 {string_adaptiveDis,    ADV(BATTERY),       {CP_TYPE_ON_OFF,0,&battery.enable_adaptiveDischarge},{1, 0, 1}},
 

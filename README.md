@@ -1,6 +1,6 @@
 Welcome to cheali-charger!
 
-Fork of Pawel's firmware (Branch:master at 08.08.2015) https://github.com/stawel/cheali-charger
+Fork of Pawel's firmware (Branch:master at 20.09.2015) https://github.com/stawel/cheali-charger
 
 ___
 
